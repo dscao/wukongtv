@@ -1,0 +1,64 @@
+send_control_command:
+  name: send_control_command
+  description: send_control_command.
+  target:
+    entity:
+      integration: wukongtv
+      domain: media_player
+  fields:
+    code:
+      example: tv_ok
+      selector:
+        text: 
+
+send_open_command:
+  name: send_open_command
+  description: send_open_command.
+  target:
+    entity:
+      integration: wukongtv
+      domain: media_player
+  fields:
+    appid:
+      example: "nl.rogro82.pipup"
+      selector:
+        text:
+  
+send_install_command:
+  name: send_install_command
+  description: send_install_command.
+  target:
+    entity:
+      integration: wukongtv
+      domain: media_player
+  fields:
+    appUrl:
+      example: "http://192.168.8.2/apk/%E4%BA%91%E6%B5%B7%E7%94%B5%E8%A7%86_1.1.6_release.apk"
+      selector:
+        text:
+  
+send_clean_command:
+  name: send_clean_command
+  description: send_clean_command.
+  target:
+    entity:
+      integration: wukongtv
+      domain: media_player
+
+  
+send_command_queue:
+  name: send_command_queue
+  description: send_command_queue.
+  target:
+    entity:
+      integration: wukongtv
+      domain: media_player
+  
+send_connect_command:
+  name: send_connect_command
+  description: send_connect_command.
+  target:
+    entity:
+      integration: wukongtv
+      domain: media_player
+  

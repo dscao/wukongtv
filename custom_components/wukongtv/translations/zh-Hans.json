@@ -1,0 +1,63 @@
+{
+  "config": {
+      "abort": {
+          "already_configured": "设备已经配置"
+      },
+      "error": {
+          "cannot_connect": "连接失败",
+          "invalid_auth": "认证错误",
+          "unknown": "未知错误"
+      },
+      "step": {
+          "user": {
+              "title":"悟空遥控TV",
+              "data": {
+                "host": "主机地址（电视或电视盒子的IP）",
+                "name": "名称",
+                "mode": "协议模式,默认：UDP,目前只支持UDP模式。"
+              }
+          }
+      }
+  },
+  "options": {
+      "step": {
+        "user":{
+            "data": {					
+              "update_interval_seconds": "刷新间隔时间(2-60 秒)"
+            }
+        }
+      }
+  },
+	"services": {
+		"send_control_command": {
+			"name": "发送控制命令",
+			"description": "向设备发送控制命令。",
+      "fields": {
+        "code": {
+          "name": "命令代码",
+          "description": "要发送的命令代码"
+        }
+      }
+		},
+		"send_open_command": {
+			"name": "Send_Open_Command",
+			"description": "发送打开命令。"
+		},
+		"send_install_command": {
+			"name": "Send_Install_Command",
+			"description": "发送安装命令。"
+		},
+		"send_clean_command": {
+			"name": "Send_Clean_Command",
+			"description": "发送清理命令。"
+		},
+		"send_command_queue": {
+			"name": "Send_Command_Queue",
+			"description": "发送查询命令。"
+		},
+		"send_connect_command": {
+			"name": "Send_Connect_Command",
+			"description": "发送连接命令。"
+		}
+	}
+}
