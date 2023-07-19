@@ -15,3 +15,44 @@
 
 
 ![5](https://github.com/dscao/wukongtv/assets/16587914/ba738281-f064-4b0f-866e-f34e490cd423)
+
+
+投屏播放暂不支持
+
+可用服务：
+
+打开APP
+```yaml
+service: media_player.select_source
+data:
+  source: 当贝桌面|com.dangbei1.tvlauncher  #参考ui界面中的信号源,等效于点击信号源
+target:
+  entity_id: media_player.wukongtv
+```
+打开app的另一种方式：
+```yaml
+service: wukongtv.send_open_command
+data:
+  appid: nl.rogro82.pipup
+```
+控制命令：code: [tv_connect,tv_up,tv_down,tv_left,tv_right,tv_home,tv_ok,tv_back,tv_volup,tv_voldown,tv_power,tv_menu,tv_0,……,tv_clean,tv_clean_cache,tv_opensetting,tv_childlock,tv_install_dangbeimarket]
+```yaml
+service: wukongtv.send_control_command
+data:
+  code: tv_ok
+```
+控制命令的另一种试：
+```yaml
+service: button.press
+data: {}
+target:
+  entity_id: button.wukongtv_fan_hui
+```
+
+安装app，仅限yaokong.wukongtv.com上的app
+```yaml
+service: wukongtv.send_install_command
+data:
+  appUrl: >-
+    http://yaokong.wukongtv.com/appstore/yaokong.php?p=com.dangbeimarket&source=wukong"  #网址必须是yaokong.wukongtv.com下才能安装，否则提示非法网址。
+```
