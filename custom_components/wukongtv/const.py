@@ -195,51 +195,44 @@ BUTTON_TYPES = {
         "code": 7
     },
     "tv_clean": {
-        "name": "clean",
+        "name": "清理",
         "device_class": "restart",
         "icon": "mdi:notification-clear-all",
         "package": "AAC4EwEzAp4AAAghAAAABwAAAAAAAAAA",
         "code": 999
     },
-    "tv_open_pipup": {
-        "name": "打开 pipup",
+    "tv_clean_cache": {
+        "name": "清理加速",
         "device_class": "restart",
-        "icon": "mdi:youtube",
+        "icon": "mdi:notification-clear-all",
         "package": "",
         "code": 0,
-        "appid": "nl.rogro82.pipup"
+        "action": "clean_cache"
     },
-    "tv_open_yunhaitv": {
-        "name": "打开云海电视",
+    "tv_opensetting": {
+        "name": "设置",
         "device_class": "restart",
-        "icon": "mdi:youtube",
+        "icon": "mdi:apps",
         "package": "",
         "code": 0,
-        "appid": "com.fengyun.live"
+        "action": "opensetting"
     },
-    "tv_open_jinritv": {
-        "name": "打开今日影视",
+    "tv_childlock": {
+        "name": "锁屏",
         "device_class": "restart",
-        "icon": "mdi:youtube",
+        "icon": "mdi:play-box-lock-outline",
         "package": "",
         "code": 0,
-        "appid": "com.today.player"
+        "action": "childlock"
     },
-    "tv_open_qhtv": {
-        "name": "打开群晖影视",
-        "device_class": "restart",
-        "icon": "mdi:youtube",
-        "package": "",
-        "code": 0,
-        "appid": "com.qhtv.powerful"
-    },
-    "tv_install_yunhaitv": {
-        "name": "安装云海电视",
+    "tv_install_dangbeimarket": {
+        "name": "安装当贝市场",
         "device_class": "restart",
         "icon": "mdi:open-in-app",
         "package": "",
         "code": 0,
-        "appurl": "http://192.168.8.1/local/apk/yunhaitv.apk"
+        "action": "install",
+        "appurl": "http://yaokong.wukongtv.com/appstore/yaokong.php?p=com.dangbeimarket&source=wukong" #网址必须是yaokong.wukongtv.com下才能安装，否则提示非法网址。
     },
 }
 

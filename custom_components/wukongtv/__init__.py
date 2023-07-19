@@ -5,7 +5,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, Config
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-
+import json
 import requests
 import binascii
 import socket
@@ -37,16 +37,14 @@ from .const import (
 )
 from homeassistant.exceptions import ConfigEntryNotReady
 
-
-
 _LOGGER = logging.getLogger(__name__)
 
 PLATFORMS: list[Platform] = [Platform.BUTTON, Platform.MEDIA_PLAYER]
 
 
 async def async_setup(hass: HomeAssistant, config: Config) -> bool:
-    """Set up configured bjtoon health code."""
-    hass.data.setdefault(DOMAIN, {})
+    """Set up configured wukongtv."""
+    hass.data.setdefault(DOMAIN, {})    
     return True
 
 
@@ -75,7 +73,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hass.async_create_task(
             hass.config_entries.async_forward_entry_setup(entry, component)
         )
-
+           
     return True
 
 async def async_unload_entry(hass, entry):
@@ -118,16 +116,26 @@ class DataUpdateCoordinator(DataUpdateCoordinator):
         self._hass = hass
         self._data = {}
         self.times = 0
-        #self._fetcher = DataFetcher(host, name, mode, timeout_s, hass)
+        
+
+    def is_json(self, jsonstr):
+        try:
+            json.loads(jsonstr)
+        except ValueError:
+            return False
+        return True
         
     def sendHttpRequest(self, url):
         url +'&t={time}'.format(time=int(time.time()))
         try:            
             resp = requests.get(url)
-            _LOGGER.debug(resp)
-            # if resp.status_code and resp.text == 'success':
-                # return False
-            return resp
+            _LOGGER.debug(url)
+            json_text = resp.text
+            if self.is_json(json_text):
+                resdata = json.loads(json_text)
+            else:
+                resdata = resp
+            return resdata
         except Exception as e:
             _LOGGER.error("requst url:{url} Error:{err}".format(url=url,err=e))
             return None
@@ -152,8 +160,30 @@ class DataUpdateCoordinator(DataUpdateCoordinator):
         
     async def GetDeviceInfo(self):
         _LOGGER.debug("getdeviceinfo http:"+self._host)
-        ret = await self._hass.async_add_executor_job(self.sendHttpRequest,'http://{host}:12104/?action=screencap'.format(host=self._host))
-        _LOGGER.debug(ret.status_code)
+        ret = await self._hass.async_add_executor_job(self.sendHttpRequest,'http://{host}:12104/?action=device_property'.format(host=self._host))
+        _LOGGER.debug(ret)
+        self._data["deviceinfo"] = ret
+        if ret:
+            self._data["brand"] = ret.get("brand","WuKong TV")
+            self._data["model"] = ret.get("deviceName","WuKong TV")
+            self._data["sw_version"] = ret.get("osVersion", "")
+        else:
+            self._data["brand"] = "WuKong TV"
+            self._data["model"] = "WuKong TV"
+            self._data["sw_version"] = ""
+        
+        
+    async def GetApps(self):
+        _LOGGER.debug("getdeviceinfo http:"+self._host)
+        ret = await self._hass.async_add_executor_job(self.sendHttpRequest,'http://{host}:12104/?action=list'.format(host=self._host))
+        _LOGGER.debug(ret)
+        self._data["apps"] = ret
+       
+        
+    async def GetScreencap(self):
+        _LOGGER.debug("getdeviceinfo http:"+self._host)
+        ret = await self._hass.async_add_executor_job(self.sendHttpRequest,'http://{host}:12104/?action=screencap'.format(host=self._host))        
+
         if ret == None:
             if self.times>3:
                 self._data["available"] = False
@@ -172,11 +202,24 @@ class DataUpdateCoordinator(DataUpdateCoordinator):
 
     async def _async_update_data(self):
         """Update data via DataFetcher."""
-        try:
-            async with timeout(10):
-                await self.GetDeviceInfo()
-                _LOGGER.debug(self._host)                    
-                _LOGGER.debug(self._data)
-                return self._data
-        except Exception as error:
-            raise UpdateFailed(error) from error
+        
+        
+        
+        if self._data.get("deviceinfo")==None:
+            tasks = [            
+                asyncio.create_task(self.GetDeviceInfo()),
+            ]
+            await asyncio.gather(*tasks)
+        
+        if self._data.get("apps")==None:
+            tasks = [            
+                asyncio.create_task(self.GetApps()),
+            ]
+            await asyncio.gather(*tasks)
+            
+        tasks = [            
+            asyncio.create_task(self.GetScreencap()),
+        ]
+        await asyncio.gather(*tasks)
+        return self._data
+        

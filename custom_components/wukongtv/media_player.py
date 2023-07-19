@@ -6,11 +6,12 @@ from datetime import datetime
 import functools
 import logging
 import time
+import os
 import requests
 import socket,base64
 from typing import Any, Concatenate, ParamSpec, TypeVar
-
-
+from urllib.parse import quote
+import json
 import voluptuous as vol
 from homeassistant.components import media_source
 import homeassistant.util.dt as dt_util
@@ -21,6 +22,9 @@ from homeassistant.components.media_player import (
     MediaPlayerEntity,
     MediaPlayerEntityFeature,
     MediaPlayerState,
+)
+from homeassistant.components.media_player.browse_media import (
+    async_process_play_media_url,
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
@@ -156,8 +160,16 @@ class WuKongTV(MediaPlayerEntity):
         self._media_id = None
         self._mediatitle = None
         self._state = None
-        
-            
+        self._source = None
+        sw_version = ""
+        self._attr_device_info = {
+            "identifiers": {(DOMAIN, host)},
+            "name": name,
+            "manufacturer": coordinator.data["brand"],
+            "model": self._coordinator.data["model"],
+            "sw_version": self._coordinator.data["sw_version"],
+        }
+                   
     async def async_added_to_hass(self):
         """Connect to dispatcher listening for entity data notifications."""
         self.async_on_remove(
@@ -166,13 +178,16 @@ class WuKongTV(MediaPlayerEntity):
  
     async def async_update(self) -> None:
         """Retrieve the latest data."""
-        await self._coordinator.async_request_refresh()    
+        await self._coordinator.async_request_refresh()
         respState = self._coordinator.data.get("available")
         if respState:
             self._state = WuKongTV_STATES["idle"]
+            app_list = [d['label']+"|"+d['pkg'] for d in self._coordinator.data["apps"]]
+            self._attr_source_list = app_list
+            self._attr_source = self._source
         else:
-            self._state = WuKongTV_STATES["off"]
-        return True
+            self._state = None 
+            self._attr_source_list = None
         
     def _wukong_screencap(self) -> bytes | None:
         """Take a screen capture from the device."""
@@ -227,15 +242,13 @@ class WuKongTV(MediaPlayerEntity):
 
         # If media ID is a relative URL, we serve it from HA.
         media_id = async_process_play_media_url(self.hass, media_id)
-
-        extra: dict[str, Any] = kwargs.get(ATTR_MEDIA_EXTRA) or {}
-        metadata: dict[str, Any] = extra.get("metadata") or {}
-        
-        
         self._path = os.path.dirname(media_id)
         mediatitle = os.path.basename(media_id)
-        self._mediatitle = unquote(mediatitle, encoding="UTF-8")      
-         
+        url = 'http://{host}:12104/?action=pushscreen_new&what=274'.format(host=self._host)
+        data = [{"filepath":mediatitle,"mimetype":media_type}]
+        ret = await self._hass.async_add_executor_job(self.sendHttpPost,url,data)
+        _LOGGER.debug(ret)
+        #http://{ha}:12105/?action=pull_video&mimetype=video/mp4&videopath={mediatitle}
         _LOGGER.debug("source media_id： %s", media_id)
                      
         self._media_id = media_id
@@ -267,17 +280,6 @@ class WuKongTV(MediaPlayerEntity):
     def device_class(self):
         """Return the state of the device."""
         return "tv"
-
-    @property
-    def device_info(self):
-        """Return the device info."""
-        return {
-            "identifiers": {(DOMAIN, self._host)},
-            "name": self._name,
-            "manufacturer": "wukongtv",
-            "model": "WuKong TV",
-            "sw_version": "",
-        }
         
     @property
     def supported_features(self):
@@ -289,14 +291,15 @@ class WuKongTV(MediaPlayerEntity):
         #supported_features |= MediaPlayerEntityFeature.VOLUME_SET
         supported_features |= MediaPlayerEntityFeature.VOLUME_STEP
         supported_features |= MediaPlayerEntityFeature.TURN_OFF
+        supported_features |= MediaPlayerEntityFeature.SELECT_SOURCE
         
         if self._muted !=None:
             supported_features |= MediaPlayerEntityFeature.VOLUME_MUTE
 
-        #supported_features |= (
-        #    MediaPlayerEntityFeature.PLAY_MEDIA
-        #    | MediaPlayerEntityFeature.BROWSE_MEDIA
-        #)
+        supported_features |= (
+           MediaPlayerEntityFeature.PLAY_MEDIA
+           | MediaPlayerEntityFeature.BROWSE_MEDIA
+        )
      
 
         return supported_features
@@ -333,6 +336,18 @@ class WuKongTV(MediaPlayerEntity):
             return self.SendControlCommand(None,BUTTON_TYPES["tv_power"]['code'])
             
 
+    async def async_select_source(self, source: str) -> None:
+        """Select input source.
+
+        If the source starts with a '!', then it will close the app instead of
+        opening it.
+        """
+        if isinstance(source, str):
+            source_ = source.split("|")[1].lstrip()
+            await self._hass.async_add_executor_job(self.SendOpenCommand, source_)
+            self._source = source
+
+                
     def media_play(self):
         """Send play commmand."""
         pass
@@ -450,11 +465,25 @@ class WuKongTV(MediaPlayerEntity):
 
     def sendHttpRequest(self,url):
         url +'&t={time}'.format(time=int(time.time()))
+        headerstr = {"User-Agent": "wk/ykios"}
         try:
-            resp = requests.get(url)
+            resp = requests.get(url,headers=headerstr)
             if resp.status_code and resp.text == 'success':
-                return False
-            return True
+                return True
+            return False
+        except Exception as e:
+            _LOGGER.error("requst url:{url} Error:{err}".format(url=url,err=e))
+            return False
+            
+    def sendHttpPost(self,url,data):
+        url +'&t={time}'.format(time=int(time.time()))
+        headerstr = {"User-Agent": "wk/ykios","Content-Type": "text/json;charset=utf-8"}
+        headerstr2 = {"User-Agent": "remote/3.7.6 (iPhone; iOS 16.5.1; Scale/3.00)"}
+        try:
+            resp = requests.post(url, headers=headerstr, json = data)
+            if resp.status_code and resp.text == 'success':
+                return True
+            return False
         except Exception as e:
             _LOGGER.error("requst url:{url} Error:{err}".format(url=url,err=e))
             return False

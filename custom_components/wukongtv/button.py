@@ -10,8 +10,9 @@ from homeassistant.const import DEVICE_DEFAULT_NAME
 from homeassistant.components.button import PLATFORM_SCHEMA
 from homeassistant.helpers import config_validation as cv, entity_platform
 from homeassistant.const import CONF_HOST
+from urllib.parse import quote
 import voluptuous as vol
-
+import json
 import time
 import logging
 import requests
@@ -57,22 +58,22 @@ class WuKongButton(ButtonEntity):
 
     def __init__(self, hass, kind, coordinator, host, name, state, assumed, mode):
         """Initialize the WuKongButton switch."""
+        self._coordinator = coordinator
         self.kind = kind
         self._state = state
         self._assumed = assumed
         self._attr_device_info = {
             "identifiers": {(DOMAIN, host)},
             "name": name,
-            "manufacturer": "wukongtv",
-            "model": "WuKong TV",
-            "sw_version": "",
+            "manufacturer": coordinator.data["brand"],
+            "model": self._coordinator.data["model"],
+            "sw_version": self._coordinator.data["sw_version"],
         }
         self._attr_device_class = BUTTON_TYPES[self.kind]['device_class']
-        self._attr_entity_registry_enabled_default = True
-        
+        self._attr_entity_registry_enabled_default = True        
         self._hass = hass
         self._host = host
-
+        
         self._mode = mode
         self._icon = BUTTON_TYPES[self.kind]['icon']
         self._code = BUTTON_TYPES[self.kind]['code']
@@ -80,8 +81,10 @@ class WuKongButton(ButtonEntity):
         self._name = f"{BUTTON_TYPES[self.kind]['name']}"
         self._unique_id = f"wukong_button_{name}_{self.kind}"
         
+        self._action = BUTTON_TYPES[self.kind].get('action')
         self._appid = BUTTON_TYPES[self.kind].get('appid')
         self._appurl = BUTTON_TYPES[self.kind].get('appurl')
+        
 
     @property
     def should_poll(self):
@@ -120,18 +123,16 @@ class WuKongButton(ButtonEntity):
 
     def sendCode(self):
         s = WuKongService(self._hass, self._host, self._mode)
-        if self._appid:
-            return s.SendOpenCommand(None,self._appid)
-        if self._appurl:
-            return s.SendInstallCommand(None,self._appurl)
+        if self._action:
+            return s.SendActionCommand(self._action, self._appid, self._appurl)
         if self._code == 999:
-            return s.SendCleanCommand(None)
+            return s.SendCleanCommand()
         if self._mode == 'UDP':
             _LOGGER.debug(self._package)
             return s.sendUDPPackage(self._package)
         else:
             _LOGGER.debug(self._code)
-            return s.SendControlCommand(None,self._code)
+            return s.SendControlCommand(self._code)
 
 class WuKongService(object):
 
@@ -140,10 +141,10 @@ class WuKongService(object):
         self._hass = hass
         self._mode = mode
 
-    def SendControlCommand(self,call,selfcode=None):
+    def SendControlCommand(self,selfcode=None):
 
         if self._mode == 'UDP':
-            code = call.data.get('code')
+            code = selfcode
             if code == None:
                 _LOGGER.error('Command Code is nil!')
                 return
@@ -158,82 +159,43 @@ class WuKongService(object):
 
         code = ''
         if selfcode == None:
-            code = call.data.get('code')
-            if code == None:
-                _LOGGER.error('Command Code is nil!')
-                return
+            _LOGGER.error('Command Code is nil!')
+            return
         else:
             code = selfcode
         url = 'http://{host}:8899/send?key={code}'.format(host=self._host, code=code)
         _LOGGER.debug(url)
         return self.sendHttpRequest(url)
 
-    def SendOpenCommand(self,call,selfappid=None):
-        appid = ''
-        if selfappid == None:
-            appid = call.data.get('appid')
-            if appid == None:
-                _LOGGER.error('Appid is nil!')
-                return
+    def SendActionCommand(self, selfaction, selfappid=None, selfappurl=None):
+        if selfaction == None:
+            _LOGGER.error('Action is nil!')
+            return
+        if selfaction == "open":
+            url = 'http://{host}:12104/?action={action}&pkg={appid}'.format(host=self._host, action=selfaction, appid=selfappid)
+        elif selfaction == "install":
+            url = 'http://{host}:12104/?action={action}&url={url}'.format(host=self._host, action=selfaction, url=quote(selfappurl))
+        elif selfaction == "childlock":
+            url = 'http://{host}:12104/?action={action}&timer=0'.format(host=self._host, action=selfaction)
         else:
-            appid = selfappid
-        url = 'http://{host}:12104/?action=open&pkg={appid}'.format(host=self._host, appid=appid)
+            url = 'http://{host}:12104/?action={action}'.format(host=self._host, action=selfaction)
         _LOGGER.debug(url)
         return self.sendHttpRequest(url)
+    
 
-    def SendInstallCommand(self,call,selfappUrl=None):
-        appUrl = ''
-        if selfappUrl ==None:
-            appUrl = call.data.get('appUrl')
-            if appUrl == None:
-                _LOGGER.error('appUrl is nil!')
-                return
-        else:
-            appUrl = selfappUrl
-        url = 'http://{host}:12104/?action=install&url={appUrl}'.format(host=self._host,appUrl=appUrl)
-        _LOGGER.debug('url:%s' % url)
-        return self.sendHttpRequest(url)
-
-    def SendCleanCommand(self,call):
+    def SendCleanCommand(self):
         url = 'http://{host}:12104/?action=clean'.format(host=self._host)
         _LOGGER.debug('url:%s' % url)
         return self.sendHttpRequest(url)
 
-    def SendConnectCommand(self,call):
-        host = call.data.get('host',self._host)
-        if host == None:
-            host = self._host
-            if host == None:
-                _LOGGER.error('host is nil!')
-                return
+    def SendConnectCommand(self):
+        if self._host == None:
+            _LOGGER.error('host is nil!')
+            return
         package=BUTTON_TYPES["tv_connect"]["package"]
         _LOGGER.debug('package:%s' % package)
-        self.sendUDPPackage(package,host)
-
-    def SendCommandQueue(self,call):
-        cmdQueue = call.data.get('cmdQueue')
-        for cmd in cmdQueue:
-
-            code = cmd.get('code')
-            delay = cmd.get('delay')
-
-            if code == None:
-                return
-            if delay == None:
-                delay = 1000
-            if self._mode == 'UDP':
-                if code in PACKAGES.keys():
-                    package = PACKAGES[code]
-                    self.sendUDPPackage(package)
-                    time.sleep(delay / 1000)
-                else:
-
-                    _LOGGER.error('Code Error! code:{cd}'.format(cd=code))
-                    return
-            else:
-                self.SendControlCommand(None,code)
-                time.sleep(delay / 1000)
-
+        self.sendUDPPackage(package,self._host)
+        
     def sendHttpRequest(self,url):
         url +'&t={time}'.format(time=int(time.time()))
         try:
@@ -270,5 +232,5 @@ class WuKongService(object):
         )
 
     async def async_update(self):
-        """Update Bjtoon health code entity."""
+        """Update entity."""
         #await self._coordinator.async_request_refresh()  
