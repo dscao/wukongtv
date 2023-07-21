@@ -34,6 +34,7 @@ from .const import (
     
 _LOGGER = logging.getLogger(__name__)
 
+TIMEOUT_SECONDS=5
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Add Switchentities from a config_entry."""      
@@ -199,7 +200,7 @@ class WuKongService(object):
     def sendHttpRequest(self,url):
         url +'&t={time}'.format(time=int(time.time()))
         try:
-            resp = requests.get(url)
+            resp = requests.get(url,timeout=TIMEOUT_SECONDS)
             if resp.status_code and resp.text == 'success':
                 return False
             return True

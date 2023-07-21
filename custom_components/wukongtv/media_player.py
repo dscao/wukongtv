@@ -101,7 +101,7 @@ _LOGGER = logging.getLogger(__name__)
 
 SERVER_TYPE_AV = 0
 SERVER_TYPE_CONTROL = 1
-
+TIMEOUT_SECONDS=5
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -467,7 +467,7 @@ class WuKongTV(MediaPlayerEntity):
         url +'&t={time}'.format(time=int(time.time()))
         headerstr = {"User-Agent": "wk/ykios"}
         try:
-            resp = requests.get(url,headers=headerstr)
+            resp = requests.get(url,headers=headerstr,timeout=TIMEOUT_SECONDS)
             if resp.status_code and resp.text == 'success':
                 return True
             return False
@@ -480,7 +480,7 @@ class WuKongTV(MediaPlayerEntity):
         headerstr = {"User-Agent": "wk/ykios","Content-Type": "text/json;charset=utf-8"}
         headerstr2 = {"User-Agent": "remote/3.7.6 (iPhone; iOS 16.5.1; Scale/3.00)"}
         try:
-            resp = requests.post(url, headers=headerstr, json = data)
+            resp = requests.post(url, headers=headerstr, json = data,timeout=TIMEOUT_SECONDS)
             if resp.status_code and resp.text == 'success':
                 return True
             return False

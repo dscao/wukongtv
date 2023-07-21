@@ -53,7 +53,7 @@ class FlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     def sendHttpRequest(self,url):
         url +'&t={time}'.format(time=int(time.time()))
         try:            
-            resp = requests.get(url)
+            resp = requests.get(url,timeout=10)
             _LOGGER.debug(url)
             _LOGGER.debug("resp.status_code")
             _LOGGER.debug(resp.status_code)

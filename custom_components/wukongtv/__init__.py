@@ -15,7 +15,6 @@ import datetime
 import asyncio
 import logging
 
-
 from homeassistant.const import (
     CONF_HOST,
     CONF_NAME,
@@ -38,6 +37,8 @@ from .const import (
 from homeassistant.exceptions import ConfigEntryNotReady
 
 _LOGGER = logging.getLogger(__name__)
+
+TIMEOUT_SECONDS=5
 
 PLATFORMS: list[Platform] = [Platform.BUTTON, Platform.MEDIA_PLAYER]
 
@@ -106,7 +107,6 @@ class DataUpdateCoordinator(DataUpdateCoordinator):
     def __init__(self, hass, host, name, mode, update_interval_seconds):
         """Initialize."""
         update_interval = datetime.timedelta(seconds=update_interval_seconds)
-        timeout_s = 10
 
         _LOGGER.debug("Data will be update every %s", update_interval)
         super().__init__(hass, _LOGGER, name=DOMAIN, update_interval=update_interval)
@@ -128,7 +128,7 @@ class DataUpdateCoordinator(DataUpdateCoordinator):
     def sendHttpRequest(self, url):
         url +'&t={time}'.format(time=int(time.time()))
         try:            
-            resp = requests.get(url)
+            resp = requests.get(url,timeout=TIMEOUT_SECONDS)
             _LOGGER.debug(url)
             json_text = resp.text
             if self.is_json(json_text):
