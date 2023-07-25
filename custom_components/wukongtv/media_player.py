@@ -420,12 +420,12 @@ class WuKongTV(MediaPlayerEntity):
         _LOGGER.debug(url)
         return self.sendHttpRequest(url)
 
-    def SendInstallCommand(self, appUrl: str):
-        if appUrl == None:
+    def SendInstallCommand(self, appurl: str):
+        if appurl == None:
             _LOGGER.error('appUrl is nil!')
             return
 
-        url = 'http://{host}:12104/?action=install&url={appUrl}'.format(host=self._host, appUrl=appUrl)
+        url = 'http://{host}:12104/?action=install&url={appUrl}'.format(host=self._host, appUrl=appurl)
         _LOGGER.debug('url:%s' % url)
         return self.sendHttpRequest(url)
 
