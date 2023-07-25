@@ -53,6 +53,6 @@ target:
 ```yaml
 service: wukongtv.send_install_command
 data:
-  appUrl: >-
+  appurl: >-
     http://yaokong.wukongtv.com/appstore/yaokong.php?p=com.dangbeimarket&source=wukong"  #网址必须是yaokong.wukongtv.com下才能安装，否则提示非法网址。
 ```
