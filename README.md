@@ -77,3 +77,6 @@ target:
   entity_id: media_player.wukong
 ```
 电视或盒子需要安装好 [pipup](https://github.com/rogro82/PiPup-homey)，并启动进程在后台。
+
+![动画](https://github.com/dscao/wukongtv/assets/16587914/2df88461-1314-44b6-b301-fcf496762758)
+
