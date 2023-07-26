@@ -56,3 +56,24 @@ data:
   appurl: >-
     http://yaokong.wukongtv.com/appstore/yaokong.php?p=com.dangbeimarket&source=wukong"  #网址必须是yaokong.wukongtv.com下才能安装，否则提示非法网址。
 ```
+
+通过pipup弹出小窗口显示消息通知
+```yaml
+service: wukongtv.send_pipup_command
+data:
+  mediatype: web
+  message: this is the message
+  title: title
+  httpurl: https://www.baidu.com/
+  duration: 20
+  titlecolor: red
+  titlesize: 24
+  messagecolor: white
+  messagesize: 16
+  backgroundcolor: black
+  width: 640
+  height: 480
+target:
+  entity_id: media_player.wukong
+```
+电视或盒子需要安装好 [pipup](https://github.com/rogro82/PiPup-homey)，并启动进程在后台。
