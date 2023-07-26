@@ -198,7 +198,7 @@ BUTTON_TYPES = {
         "name": "清理",
         "device_class": "restart",
         "icon": "mdi:notification-clear-all",
-        "package": "AAC4EwEzAp4AAAghAAAABwAAAAAAAAAA",
+        "package": "",
         "code": 999
     },
     "tv_clean_cache": {

@@ -142,7 +142,27 @@ async def async_setup_entry(
     platform.async_register_entity_service(
         "send_connect_command", {}, "SendConnectCommand",
     )
+    platform.async_register_entity_service(
+        "send_pipup_command", 
+        {            
+            vol.Required("message"): cv.string,
+            vol.Optional("mediatype"): cv.string,            
+            vol.Optional("title"): cv.string,
+            vol.Optional("httpurl"): cv.string,
+            vol.Optional("duration"): cv.positive_int,
+            vol.Optional("position"): cv.positive_int,
+            vol.Optional("titlecolor"): cv.string,
+            vol.Optional("titlesize"): cv.positive_int,
+            vol.Optional("messagecolor"): cv.string,
+            vol.Optional("messagesize"): cv.positive_int,
+            vol.Optional("backgroundcolor"): cv.string,
+            vol.Optional("width"): cv.positive_int,
+            vol.Optional("height"): cv.positive_int,
+        },
+        "sendpipup",
+    )
 
+# url, message, title, duration, position, titleColor, titleSize, messageColor, messageSize, backgroundColor,width
 
 class WuKongTV(MediaPlayerEntity):
     """WuKongTV Device"""
@@ -180,7 +200,7 @@ class WuKongTV(MediaPlayerEntity):
         """Retrieve the latest data."""
         await self._coordinator.async_request_refresh()
         respState = self._coordinator.data.get("available")
-        if respState:
+        if self._coordinator.data.get("apps"):
             self._state = WuKongTV_STATES["idle"]
             app_list = [d['label']+"|"+d['pkg'] for d in self._coordinator.data["apps"]]
             self._attr_source_list = app_list
@@ -395,10 +415,12 @@ class WuKongTV(MediaPlayerEntity):
             if code == None:
                 _LOGGER.error('Command Code is nil!')
                 return
-            if code in BUTTON_TYPES.keys():
+            if code in BUTTON_TYPES.keys():               
                 package = BUTTON_TYPES[code]["package"]
                 _LOGGER.debug(package)
-                return self.sendUDPPackage(package)
+                if package:
+                    return self.sendUDPPackage(package)
+              
             else:
                 _LOGGER.error('Code Error!')
                 return
@@ -412,6 +434,22 @@ class WuKongTV(MediaPlayerEntity):
         _LOGGER.debug(url)
         return self.sendHttpRequest(url)
 
+    def SendActionCommand(self, selfaction, selfappid=None, selfappurl=None):
+        if selfaction == None:
+            _LOGGER.error('Action is nil!')
+            return
+        if selfaction == "open":
+            url = 'http://{host}:12104/?action={action}&pkg={appid}'.format(host=self._host, action=selfaction, appid=selfappid)
+        elif selfaction == "install":
+            url = 'http://{host}:12104/?action={action}&url={url}'.format(host=self._host, action=selfaction, url=quote(selfappurl))
+        elif selfaction == "childlock":
+            url = 'http://{host}:12104/?action={action}&timer=0'.format(host=self._host, action=selfaction)
+        else:
+            url = 'http://{host}:12104/?action={action}'.format(host=self._host, action=selfaction)
+        _LOGGER.debug(url)
+        return self.sendHttpRequest(url)
+        
+        
     def SendOpenCommand(self, appid: str):
         if appid == None:
             _LOGGER.error('Appid is nil!')
@@ -424,7 +462,6 @@ class WuKongTV(MediaPlayerEntity):
         if appurl == None:
             _LOGGER.error('appUrl is nil!')
             return
-
         url = 'http://{host}:12104/?action=install&url={appUrl}'.format(host=self._host, appUrl=appurl)
         _LOGGER.debug('url:%s' % url)
         return self.sendHttpRequest(url)
@@ -462,6 +499,52 @@ class WuKongTV(MediaPlayerEntity):
             else:
                 self.SendControlCommand(None,code)
                 time.sleep(delay / 1000)
+                
+    def sendpipup(self, message, mediatype=None, title=None, httpurl=None, duration=None, position=None, titlecolor=None, titlesize=None, messagecolor=None, messagesize=None, backgroundcolor=None, width=None, height=None):
+        if httpurl:
+            httpurl +'&t={time}'.format(time=int(time.time()))
+        url = 'http://{host}:7979/notify'.format(host=self._host)
+        headerstr = {"Content-Type": "application/json"}
+        mediatypestr = mediatype or "image"
+        if mediatypestr == "web" and not httpurl==None:
+            data = {
+                "duration": duration or 20,
+                "position": position or 0,
+                "title": title or '',
+                "titleColor": titlecolor or '#50BFF2',
+                "titleSize": titlesize or 16,
+                "message": message,
+                "messageColor": messagecolor or'#fbf5f5',
+                "messageSize": messagesize or 14,
+                "backgroundColor":  backgroundcolor or '#0f0e0e',
+                "media": { 
+                    "web": {
+                          "uri":  httpurl,
+                          "width": width or 640,
+                    }
+                }
+            }
+        elif mediatypestr == "text":
+            data = {
+                "duration": duration or 20,
+                "position": position or 0,
+                "title": title or '消息提醒',
+                "titleColor": titlecolor or '#50BFF2',
+                "titleSize": titlesize or 48,
+                "message": message,
+                "messageColor": messagecolor or'#fbf5f5',
+                "messageSize": messagesize or 32,
+                "backgroundColor":  backgroundcolor or '#0f0e0e',
+            }        
+        try:
+            resp = requests.post(url, headers=headerstr, json = data, timeout=TIMEOUT_SECONDS)
+            _LOGGER.debug('url:%s , data:%s' , url, data)
+            if resp.status_code==200:
+                return True
+            return False
+        except Exception as e:
+            _LOGGER.error("requst pipup:{url} Error:{err}".format(url=url,err=e))
+            return False
 
     def sendHttpRequest(self,url):
         url +'&t={time}'.format(time=int(time.time()))
@@ -487,6 +570,7 @@ class WuKongTV(MediaPlayerEntity):
         except Exception as e:
             _LOGGER.error("requst url:{url} Error:{err}".format(url=url,err=e))
             return False
+    
 
     def sendUDPPackage(self,base64Data):
         addr = (self._host, 12305)

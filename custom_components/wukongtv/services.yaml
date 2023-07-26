@@ -9,7 +9,30 @@ send_control_command:
     code:
       example: tv_ok
       selector:
-        text: 
+        select:
+          options:
+            - tv_connect
+            - tv_up
+            - tv_down
+            - tv_left
+            - tv_right
+            - tv_home
+            - tv_ok
+            - tv_back
+            - tv_volup
+            - tv_voldown
+            - tv_power
+            - tv_menu
+            - tv_0
+            - tv_1
+            - tv_2
+            - tv_3
+            - tv_4
+            - tv_5
+            - tv_6
+            - tv_7
+            - tv_8
+            - tv_9
 
 send_open_command:
   name: send_open_command
@@ -62,3 +85,74 @@ send_connect_command:
       integration: wukongtv
       domain: media_player
   
+send_pipup_command:
+  name: send_pipup_command
+  description: send_pipup_command.
+  target:
+    entity:
+      integration: wukongtv
+      domain: media_player
+  fields:
+    mediatype:
+      example: "web"
+      required: true
+      selector:
+        select:
+          options:
+            - text
+            - web
+    message:
+      example: "this is the message"
+      required: true
+      selector:
+        text:
+    title:
+      example: "title"
+      selector:
+        text:
+    httpurl:
+      example: "https://www.baidu.com/"
+      selector:
+        text:
+    duration:
+      example: 20
+      selector:
+        text:
+    position:
+      example: 0
+      selector:
+        select:
+          options:
+            - 0
+            - 1
+            - 2
+            - 3
+            - 4
+    titlecolor:
+      example: red
+      selector:
+        text:
+    titlesize:
+      example: 24
+      selector:
+        text:        
+    messagecolor:
+      example: white
+      selector:
+        text:
+    messagesize:
+      example: 16
+      selector:
+        text:
+    backgroundcolor:
+      example: black
+      selector:
+        text:
+    width:
+      example: 640
+      selector:
+        text:
+    height:
+      example: 480
+      selector:
+        text:
