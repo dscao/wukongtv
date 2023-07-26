@@ -35,7 +35,7 @@ service: wukongtv.send_open_command
 data:
   appid: nl.rogro82.pipup
 ```
-控制命令：code: [tv_connect,tv_up,tv_down,tv_left,tv_right,tv_home,tv_ok,tv_back,tv_volup,tv_voldown,tv_power,tv_menu,tv_0,……,tv_clean,tv_clean_cache,tv_opensetting,tv_childlock,tv_install_dangbeimarket]
+控制命令：code: 
 ```yaml
 service: wukongtv.send_control_command
 data:
