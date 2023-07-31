@@ -30,6 +30,8 @@ from .const import (
     CONF_UPDATE_INTERVAL,
     COORDINATOR,
     BUTTON_TYPES,
+    CONF_TURN_ON_COMMAND,
+    CONF_TURN_OFF_COMMAND,
     )
     
 _LOGGER = logging.getLogger(__name__)

@@ -33,6 +33,8 @@ from .const import (
     PROP_ETHMAC,
     PROP_WIFIMAC,
     SIGNAL_CONFIG_ENTITY,
+    CONF_TURN_ON_COMMAND,
+    CONF_TURN_OFF_COMMAND,
 )
 from homeassistant.exceptions import ConfigEntryNotReady
 
@@ -137,7 +139,7 @@ class DataUpdateCoordinator(DataUpdateCoordinator):
                 resdata = resp
             return resdata
         except Exception as e:
-            _LOGGER.error("requst url:{url} Error:{err}".format(url=url,err=e))
+            _LOGGER.warning("requst url:{url} Error:{err}".format(url=url,err=e))
             return None
 
     def sendUDPPackage(self, base64Data):
@@ -154,7 +156,7 @@ class DataUpdateCoordinator(DataUpdateCoordinator):
             s.sendto(bytePackge,addr)
             ret = True
         except Exception as e:
-            _LOGGER.error("requst UDP Error:{err}, Package:{pkg}".format(err=e,pkg=base64Data))
+            _LOGGER.warning("requst UDP Error:{err}, Package:{pkg}".format(err=e,pkg=base64Data))
             s.close()
         return ret
         
@@ -185,8 +187,9 @@ class DataUpdateCoordinator(DataUpdateCoordinator):
         ret = await self._hass.async_add_executor_job(self.sendHttpRequest,'http://{host}:12104/?action=screencap'.format(host=self._host))        
 
         if ret == None:
-            if self.times>3:
+            if self.times>2:
                 self._data["available"] = False
+                self._data["screencap"] = None
             else:
                 self._data["available"] = True
             self.times += 1

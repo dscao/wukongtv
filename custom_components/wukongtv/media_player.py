@@ -5,6 +5,8 @@ from collections.abc import Awaitable, Callable, Coroutine
 from datetime import datetime
 import functools
 import logging
+import voluptuous as vol
+import traceback
 import time
 import os
 import requests
@@ -15,6 +17,7 @@ import json
 import voluptuous as vol
 from homeassistant.components import media_source
 import homeassistant.util.dt as dt_util
+from homeassistant.exceptions import ServiceNotFound
 
 from homeassistant.components import persistent_notification
 from homeassistant.components.media_player import (
@@ -37,7 +40,7 @@ from homeassistant.const import (
     CONF_NAME,
 )
 
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, Context
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers import config_validation as cv, entity_platform
 from homeassistant.config_entries import ConfigEntry
@@ -50,6 +53,8 @@ from .const import (
     CONF_UPDATE_INTERVAL,
     COORDINATOR,
     BUTTON_TYPES,
+    CONF_TURN_ON_COMMAND,
+    CONF_TURN_OFF_COMMAND,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -92,16 +97,20 @@ SUPPORT_WuKongTV = (
     | MediaPlayerEntityFeature.SELECT_SOUND_MODE
     | MediaPlayerEntityFeature.PLAY_MEDIA
     | MediaPlayerEntityFeature.BROWSE_MEDIA
+    | MediaPlayerEntityFeature.TURN_OFF
+    | MediaPlayerEntityFeature.TURN_ON
 )
 
 
 import logging
 
 _LOGGER = logging.getLogger(__name__)
+LOGGER_NAME = 'media_player'
 
 SERVER_TYPE_AV = 0
 SERVER_TYPE_CONTROL = 1
 TIMEOUT_SECONDS=5
+CONTEXT = Context()
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -113,10 +122,12 @@ async def async_setup_entry(
     name = config[CONF_NAME]
     mode = config[CONF_MODE]
     host = config[CONF_HOST]
+    turn_on_command = entry.options.get(CONF_TURN_ON_COMMAND, "None")
+    turn_off_command = entry.options.get(CONF_TURN_OFF_COMMAND, "None")
     unique_id = f"wukongtvmediaplay-{host}"
     coordinator = hass.data[DOMAIN][entry.entry_id][COORDINATOR]
 
-    dev = WuKongTV(hass, coordinator, unique_id, name, host, mode)
+    dev = WuKongTV(hass, coordinator, unique_id, name, host, mode, turn_on_command, turn_off_command)
     async_add_entities([dev])
 
 
@@ -166,7 +177,7 @@ async def async_setup_entry(
 
 class WuKongTV(MediaPlayerEntity):
     """WuKongTV Device"""
-    def __init__(self, hass, coordinator, unique_id, name, host, mode):
+    def __init__(self, hass, coordinator, unique_id, name, host, mode, turn_on_command, turn_off_command):
         """Initialize the WuKongTV Player."""
         self._hass = hass
         self._unique_id = unique_id
@@ -174,6 +185,8 @@ class WuKongTV(MediaPlayerEntity):
         self._name = name
         self._host = host
         self._mode = mode
+        self._turnon = turn_on_command
+        self._turnoff = turn_off_command
         self._volume = None
         self._muted = None
         self._state = None
@@ -199,14 +212,15 @@ class WuKongTV(MediaPlayerEntity):
     async def async_update(self) -> None:
         """Retrieve the latest data."""
         await self._coordinator.async_request_refresh()
-        respState = self._coordinator.data.get("available")
-        if self._coordinator.data.get("apps"):
+        
+        if self._coordinator.data.get("available") == True:
             self._state = WuKongTV_STATES["idle"]
-            app_list = [d['label']+"|"+d['pkg'] for d in self._coordinator.data["apps"]]
-            self._attr_source_list = app_list
-            self._attr_source = self._source
+            if self._coordinator.data.get("apps"):                
+                app_list = [d['label']+"|"+d['pkg'] for d in self._coordinator.data["apps"]]
+                self._attr_source_list = app_list
+                self._attr_source = self._source
         else:
-            self._state = None 
+            self._state = WuKongTV_STATES["off"]
             self._attr_source_list = None
         
     def _wukong_screencap(self) -> bytes | None:
@@ -313,8 +327,13 @@ class WuKongTV(MediaPlayerEntity):
         supported_features |= MediaPlayerEntityFeature.TURN_OFF
         supported_features |= MediaPlayerEntityFeature.SELECT_SOURCE
         
+        if self._turnoff and self._turnoff != "None":
+            supported_features |= MediaPlayerEntityFeature.TURN_ON
+        
         if self._muted !=None:
             supported_features |= MediaPlayerEntityFeature.VOLUME_MUTE
+
+
 
         supported_features |= (
            MediaPlayerEntityFeature.PLAY_MEDIA
@@ -346,14 +365,30 @@ class WuKongTV(MediaPlayerEntity):
     
     async def async_turn_on(self) -> None:
         # """Turn on the device."""
-        pass
+        if self._turnon and self._turnon != "None":
+            try:
+                result = await self._hass.services.async_call("script", "turn_on", {'entity_id': self._turnon}, blocking=True, context = CONTEXT)
+            except (vol.Invalid, ServiceNotFound):
+                _LOGGER.error("[%s] %s : failed to call service\n%s", LOGGER_NAME, self._turnon, traceback.format_exc())
+            else:
+                _LOGGER.debug("[%s] %s : success to call service", LOGGER_NAME, self._turnon)
+        else:
+            pass
 
     async def async_turn_off(self) -> None:
         """Turn off the device."""
-        if self._mode == 'UDP':
-            return self.sendUDPPackage(BUTTON_TYPES["tv_power"]['package'])
+        if self._turnoff and self._turnoff != "None":
+            try:
+                result = await self._hass.services.async_call("script", "turn_on", {'entity_id': self._turnoff}, blocking=True, context = CONTEXT)
+            except (vol.Invalid, ServiceNotFound):
+                _LOGGER.error("[%s] %s : failed to call service\n%s", LOGGER_NAME, self._turnon, traceback.format_exc())
+            else:
+                _LOGGER.debug("[%s] %s : success to call service", LOGGER_NAME, self._turnon)
         else:
-            return self.SendControlCommand(None,BUTTON_TYPES["tv_power"]['code'])
+            if self._mode == 'UDP':
+                return self.sendUDPPackage(BUTTON_TYPES["tv_power"]['package'])
+            else:
+                return self.SendControlCommand(None,BUTTON_TYPES["tv_power"]['code'])
             
 
     async def async_select_source(self, source: str) -> None:

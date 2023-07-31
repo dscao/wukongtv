@@ -29,6 +29,8 @@ from .const import (
     CONF_SWITCHS, 
     CONF_MODE, 
     CONF_UPDATE_INTERVAL, 
+    CONF_TURN_ON_COMMAND,
+    CONF_TURN_OFF_COMMAND,
     )
 from configparser import ConfigParser
 try: import simplejson
@@ -53,7 +55,7 @@ class FlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     def sendHttpRequest(self,url):
         url +'&t={time}'.format(time=int(time.time()))
         try:            
-            resp = requests.get(url,timeout=10)
+            resp = requests.get(url,timeout=30)
             _LOGGER.debug(url)
             _LOGGER.debug("resp.status_code")
             _LOGGER.debug(resp.status_code)
@@ -137,7 +139,15 @@ class OptionsFlow(config_entries.OptionsFlow):
                     vol.Optional(
                         CONF_UPDATE_INTERVAL,
                         default=self.config_entry.options.get(CONF_UPDATE_INTERVAL, 10),
-                    ): vol.All(vol.Coerce(int), vol.Range(min=3, max=30)),                    
+                    ): vol.All(vol.Coerce(int), vol.Range(min=3, max=30)),
+                    vol.Optional(
+                        CONF_TURN_ON_COMMAND,
+                        default=self.config_entry.options.get(CONF_TURN_ON_COMMAND, self.config_entry.data.get(CONF_TURN_ON_COMMAND, "None"))
+                    ): vol.All(vol.Coerce(str)),
+                    vol.Optional(
+                        CONF_TURN_OFF_COMMAND,
+                        default=self.config_entry.options.get(CONF_TURN_OFF_COMMAND, self.config_entry.data.get(CONF_TURN_OFF_COMMAND, "None"))
+                    ): vol.All(vol.Coerce(str)),
                 }
             ),
         )

@@ -23,7 +23,9 @@
       "step": {
         "user":{
             "data": {					
-              "update_interval_seconds": "刷新间隔时间(2-60 秒)"
+              "update_interval_seconds": "刷新间隔时间(2-60 秒)",
+              "turn_off_command": "关机脚本实体id（比如：script.turnofftv ,None则用内置的）",
+              "turn_on_command": "开机脚本实体id（比如：script.turnontv 方便关机组合操作）"
             }
         }
       }

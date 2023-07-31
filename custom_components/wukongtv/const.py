@@ -109,14 +109,7 @@ BUTTON_TYPES = {
         "icon": "mdi:volume-medium",
         "package": "AAC4EwEzAp4AAAghAAAAGQAAAAAAAAAA",
         "code": 25
-    },
-    "tv_power": {
-        "name": "电源",
-        "device_class": "restart",
-        "icon": "mdi:power",
-        "package": "AAC4EwEzAp4AAAghAAAAGgAAAAAAAAAA",
-        "code": 26
-    },
+    },    
     "tv_menu": {
         "name": "菜单",
         "device_class": "restart",
@@ -200,6 +193,13 @@ BUTTON_TYPES = {
         "icon": "mdi:notification-clear-all",
         "package": "",
         "code": 999
+    },
+    "tv_power": {
+        "name": "电源",
+        "device_class": "restart",
+        "icon": "mdi:power",
+        "package": "AAC4EwEzAp4AAAghAAAAGgAAAAAAAAAA",
+        "code": 26
     },
     "tv_clean_cache": {
         "name": "清理加速",
