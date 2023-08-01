@@ -117,6 +117,7 @@ class DataUpdateCoordinator(DataUpdateCoordinator):
         self._mode = mode
         self._hass = hass
         self._data = {}
+        self._data["available"] = None
         self.times = 0
         
 
@@ -187,7 +188,7 @@ class DataUpdateCoordinator(DataUpdateCoordinator):
         ret = await self._hass.async_add_executor_job(self.sendHttpRequest,'http://{host}:12104/?action=screencap'.format(host=self._host))        
 
         if ret == None:
-            if self.times>2:
+            if self.times>2 or self._data["available"] == None:
                 self._data["available"] = False
                 self._data["screencap"] = None
             else:
