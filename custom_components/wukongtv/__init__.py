@@ -117,8 +117,6 @@ class DataUpdateCoordinator(DataUpdateCoordinator):
         self._mode = mode
         self._hass = hass
         self._data = {}
-        self._data["available"] = None
-        self.times = 0
         
 
     def is_json(self, jsonstr):
@@ -186,22 +184,16 @@ class DataUpdateCoordinator(DataUpdateCoordinator):
     async def GetScreencap(self):
         _LOGGER.debug("getdeviceinfo http:"+self._host)
         ret = await self._hass.async_add_executor_job(self.sendHttpRequest,'http://{host}:12104/?action=screencap'.format(host=self._host))        
-
-        if ret == None:
-            if self.times>2 or self._data["available"] == None:
-                self._data["available"] = False
-                self._data["screencap"] = None
-            else:
-                self._data["available"] = True
-            self.times += 1
+        _LOGGER.debug(ret)
+        if ret == None:         
+            self._data["available"] = False
+            self._data["screencap"] = None
             return
         if ret.status_code == 404:
             self._data["available"] = True
         if ret.status_code == 200:
             self._data["screencap"] = ret.content
             self._data["available"] = True
-        self.times = 0
-
         
 
     async def _async_update_data(self):
