@@ -18,6 +18,7 @@ import voluptuous as vol
 from homeassistant.components import media_source
 import homeassistant.util.dt as dt_util
 from homeassistant.exceptions import ServiceNotFound
+from homeassistant.helpers.event import (async_track_state_change)
 
 from homeassistant.components import persistent_notification
 from homeassistant.components.media_player import (
@@ -55,6 +56,8 @@ from .const import (
     BUTTON_TYPES,
     CONF_TURN_ON_COMMAND,
     CONF_TURN_OFF_COMMAND,
+    CONF_ONOFF_SENSOR,
+    CONF_ONOFF_POWER,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -124,10 +127,12 @@ async def async_setup_entry(
     host = config[CONF_HOST]
     turn_on_command = entry.options.get(CONF_TURN_ON_COMMAND, "None")
     turn_off_command = entry.options.get(CONF_TURN_OFF_COMMAND, "None")
+    onoff_sensor = entry.options.get(CONF_ONOFF_SENSOR, "None")
+    onoff_power = entry.options.get(CONF_ONOFF_POWER, 20)
     unique_id = f"wukongtvmediaplay-{host}"
     coordinator = hass.data[DOMAIN][entry.entry_id][COORDINATOR]
 
-    dev = WuKongTV(hass, coordinator, unique_id, name, host, mode, turn_on_command, turn_off_command)
+    dev = WuKongTV(hass, coordinator, unique_id, name, host, mode, turn_on_command, turn_off_command, onoff_sensor, onoff_power)
     async_add_entities([dev])
 
 
@@ -177,7 +182,7 @@ async def async_setup_entry(
 
 class WuKongTV(MediaPlayerEntity):
     """WuKongTV Device"""
-    def __init__(self, hass, coordinator, unique_id, name, host, mode, turn_on_command, turn_off_command):
+    def __init__(self, hass, coordinator, unique_id, name, host, mode, turn_on_command, turn_off_command, onoff_sensor, onoff_power):
         """Initialize the WuKongTV Player."""
         self._hass = hass
         self._unique_id = unique_id
@@ -187,12 +192,14 @@ class WuKongTV(MediaPlayerEntity):
         self._mode = mode
         self._turnon = turn_on_command
         self._turnoff = turn_off_command
+        self._sensor = onoff_sensor
+        self._power = onoff_power
+        self._sensor_power = None
         self._volume = None
         self._muted = None
         self._state = None
         self._media_id = None
         self._mediatitle = None
-        self._state = None
         self._source = None
         sw_version = ""
         self._attr_device_info = {
@@ -202,6 +209,34 @@ class WuKongTV(MediaPlayerEntity):
             "model": self._coordinator.data["model"],
             "sw_version": self._coordinator.data["sw_version"],
         }
+        
+        if onoff_sensor and ("sensor." in onoff_sensor) and ("power" in onoff_sensor):            
+            state_power = self._hass.states.get(onoff_sensor)
+            _LOGGER.debug(state_power)
+            if state_power is not None:
+                self._sensor_power = state_power.state
+            async_track_state_change(
+                hass, onoff_sensor, self._async_onoff_sensor_changed)
+                
+    async def _async_onoff_sensor_changed(self, entity_id, old_state, new_state):
+        _LOGGER.debug('power_sensor state changed |' + str(entity_id) + '|' + str(old_state) + '|' + str(new_state))
+        # Handle temperature changes.
+        if new_state is None:
+            return
+        try:
+            self._sensor_power = float(new_state.state)
+        except ValueError:
+            _LOGGER.warning("功率传感器 %s 不正确，值 %s 不为数字，请修改！", self._sensor, new_state.state)
+            self._sensor_power = None
+            return
+        _LOGGER.debug(self._sensor_power)
+        if self._sensor_power > self._power:
+            self._state = WuKongTV_STATES["idle"]
+        else:
+            self._state = WuKongTV_STATES["off"]   
+        _LOGGER.debug(self._state)
+        self.async_write_ha_state()
+
                    
     async def async_added_to_hass(self):
         """Connect to dispatcher listening for entity data notifications."""
@@ -211,16 +246,17 @@ class WuKongTV(MediaPlayerEntity):
  
     async def async_update(self) -> None:
         """Retrieve the latest data."""
-        await self._coordinator.async_request_refresh()
-        
+        await self._coordinator.async_request_refresh()        
         if self._coordinator.data.get("available") == True:
-            self._state = WuKongTV_STATES["idle"]
+            if self._sensor_power == None:
+                self._state = WuKongTV_STATES["standby"]
             if self._coordinator.data.get("apps"):                
                 app_list = [d['label']+"|"+d['pkg'] for d in self._coordinator.data["apps"]]
                 self._attr_source_list = app_list
                 self._attr_source = self._source
         else:
-            self._state = WuKongTV_STATES["off"]
+            if self._sensor_power == None:
+                self._state = WuKongTV_STATES["off"]
             self._attr_source_list = None
         
     def _wukong_screencap(self) -> bytes | None:

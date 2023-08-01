@@ -22,6 +22,9 @@ CONF_STATE_DETECTION_RULES = "state_detection_rules"
 CONF_TURN_OFF_COMMAND = "turn_off_command"
 CONF_TURN_ON_COMMAND = "turn_on_command"
 
+CONF_ONOFF_SENSOR = "onoff_sensor"
+CONF_ONOFF_POWER = "onoff_power"
+
 DEFAULT_WUKONG_SERVER_PORT = 5037
 DEFAULT_DEVICE_CLASS = "auto"
 DEFAULT_EXCLUDE_UNNAMED_APPS = False

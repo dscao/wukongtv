@@ -31,6 +31,8 @@ from .const import (
     CONF_UPDATE_INTERVAL, 
     CONF_TURN_ON_COMMAND,
     CONF_TURN_OFF_COMMAND,
+    CONF_ONOFF_SENSOR,
+    CONF_ONOFF_POWER,
     )
 from configparser import ConfigParser
 try: import simplejson
@@ -148,6 +150,14 @@ class OptionsFlow(config_entries.OptionsFlow):
                         CONF_TURN_OFF_COMMAND,
                         default=self.config_entry.options.get(CONF_TURN_OFF_COMMAND, self.config_entry.data.get(CONF_TURN_OFF_COMMAND, "None"))
                     ): vol.All(vol.Coerce(str)),
+                    vol.Optional(
+                        CONF_ONOFF_SENSOR,
+                        default=self.config_entry.options.get(CONF_ONOFF_SENSOR, self.config_entry.data.get(CONF_ONOFF_SENSOR, "None"))
+                    ): vol.All(vol.Coerce(str)),
+                    vol.Optional(
+                        CONF_ONOFF_POWER,
+                        default=self.config_entry.options.get(CONF_ONOFF_POWER, 20),
+                    ): vol.All(vol.Coerce(int), vol.Range(min=1, max=1000)),
                 }
             ),
         )
