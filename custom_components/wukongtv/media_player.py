@@ -354,7 +354,7 @@ class WuKongTV(MediaPlayerEntity):
     @property
     def supported_features(self):
         """Flag media player features that are supported."""
-        supported_features = 0
+        supported_features = MediaPlayerEntityFeature(0)
 
         #supported_features |= MediaPlayerEntityFeature.PLAY
         #supported_features |= MediaPlayerEntityFeature.STOP
