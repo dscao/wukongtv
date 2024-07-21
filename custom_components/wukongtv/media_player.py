@@ -18,7 +18,7 @@ import voluptuous as vol
 from homeassistant.components import media_source
 import homeassistant.util.dt as dt_util
 from homeassistant.exceptions import ServiceNotFound
-from homeassistant.helpers.event import (async_track_state_change)
+from homeassistant.helpers.event import (async_track_state_change_event)
 
 from homeassistant.components import persistent_notification
 from homeassistant.components.media_player import (
@@ -41,7 +41,7 @@ from homeassistant.const import (
     CONF_NAME,
 )
 
-from homeassistant.core import HomeAssistant, Context
+from homeassistant.core import HomeAssistant, Context, Event, EventStateChangedData, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers import config_validation as cv, entity_platform
 from homeassistant.config_entries import ConfigEntry
@@ -215,10 +215,13 @@ class WuKongTV(MediaPlayerEntity):
             _LOGGER.debug(state_power)
             if state_power is not None:
                 self._sensor_power = state_power.state
-            async_track_state_change(
+            async_track_state_change_event(
                 hass, onoff_sensor, self._async_onoff_sensor_changed)
                 
-    async def _async_onoff_sensor_changed(self, entity_id, old_state, new_state):
+    async def _async_onoff_sensor_changed(event: Event[EventStateChangedData]) -> None:
+        entity_id = event.data["entity_id"]
+        old_state = event.data["old_state"]
+        new_state = event.data["new_state"]
         _LOGGER.debug('power_sensor state changed |' + str(entity_id) + '|' + str(old_state) + '|' + str(new_state))
         # Handle temperature changes.
         if new_state is None:
@@ -226,7 +229,7 @@ class WuKongTV(MediaPlayerEntity):
         try:
             self._sensor_power = float(new_state.state)
         except ValueError:
-            _LOGGER.warning("功率传感器 %s 不正确，值 %s 不为数字，请修改！", self._sensor, new_state.state)
+            _LOGGER.warning("power sensor %s err，%s is not Number！", self._sensor, new_state.state)
             self._sensor_power = None
             return
         _LOGGER.debug(self._sensor_power)
