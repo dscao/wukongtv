@@ -218,7 +218,7 @@ class WuKongTV(MediaPlayerEntity):
             async_track_state_change_event(
                 hass, onoff_sensor, self._async_onoff_sensor_changed)
                 
-    async def _async_onoff_sensor_changed(event: Event[EventStateChangedData]) -> None:
+    async def _async_onoff_sensor_changed(self, event: Event[EventStateChangedData]) -> None:
         entity_id = event.data["entity_id"]
         old_state = event.data["old_state"]
         new_state = event.data["new_state"]
