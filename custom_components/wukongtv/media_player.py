@@ -80,7 +80,6 @@ PREFIX_WuKongTV = "WuKong TV"
 WuKongTV_STATES = {
     "off": MediaPlayerState.OFF,
     "idle": MediaPlayerState.IDLE,
-    "standby": MediaPlayerState.STANDBY,
     "playing": MediaPlayerState.PLAYING,
     "paused": MediaPlayerState.PAUSED,
 }
@@ -252,7 +251,7 @@ class WuKongTV(MediaPlayerEntity):
         await self._coordinator.async_request_refresh()        
         if self._coordinator.data.get("available") == True:
             if self._sensor_power == None:
-                self._state = WuKongTV_STATES["standby"]
+                self._state = WuKongTV_STATES["idle"]
             if self._coordinator.data.get("apps"):                
                 app_list = [d['label']+"|"+d['pkg'] for d in self._coordinator.data["apps"]]
                 self._attr_source_list = app_list
