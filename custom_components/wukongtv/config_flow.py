@@ -122,9 +122,8 @@ class OptionsFlow(config_entries.OptionsFlow):
     """Config flow options for autoamap."""
 
     def __init__(self, config_entry):
-        """Initialize autoamap options flow."""
-        self.config_entry = config_entry
-
+        """Initialize options flow."""
+        
     async def async_step_init(self, user_input=None):
         """Manage the options."""
         return await self.async_step_user()
